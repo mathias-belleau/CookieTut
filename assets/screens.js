@@ -12,7 +12,8 @@ Game.Screen.startScreen = {
 	handleInput: function(inputType, inputData) {
 		//when [enter] is pressed, go to the play screen
 		if (inputType === 'keydown') {
-			if (inputData.keyCode === ROT.VK_RETURN) {
+			console.log(ROT.VK_RETURN);
+			if (inputData.keyCode === ROT.KEYS.VK_RETURN) {
 				Game.switchScreen(Game.Screen.playScreen);
 			}
 		}
@@ -21,11 +22,47 @@ Game.Screen.startScreen = {
 
 //define our playing screen
 Game.Screen.playScreen = {
-	enter: function() { console.log("Entered play screen"); },
+	enter: function() { 
+		var map = [];
+		for (var x = 0; x < 80; x++) {
+			//create the nested array for y values
+			map.push([]);
+			//add all the tiles
+			for (var y = 0; y < 24; y++) {
+				map[x].push(Game.Tile.nullTile);
+			}
+		}
+		var generator = new ROT.Map.Cellular(80,24);
+		generator.randomize(0.5);
+		var totalIterations = 3;
+		// iterate smoothen the map
+		for (var i = 0; i < totalIterations - 1; i++) {
+			generator.create();
+		}
+		// smooteh it one last time and then update our map
+		generator.create(function(x,y,v) {
+			if (v === 1){
+				map[x][y] = Game.Tile.floorTile;
+			} else { 
+				map[x][y] = Game.Tile.wallTile;
+			}
+		});
+		//create our map from the tiles
+		this._map = new Game.Map(map);
+	 },
 	exit: function() { console.log("Exited play screen."); },
 	render: function(display) {
-		display.drawText(3,5, "%c{red}%b{white}This game exists!");
-		display.drawText(4,6, "Press [Enter] to win, or [Esc] to lose!");
+		// iterate through all the map cells
+		for (var x = 0; x < this._map.getWidth(); x++) {
+			for (var y = 0; y < this._map.getHeight(); y++ ) {
+				// fetch the glyph for the tile and render it to the screen
+				var glyph = this._map.getTile(x, y).getGlyph();
+				display.draw(x,y,
+					glyph.getChar(),
+					glyph.getForeground(),
+					glyph.getBackground());
+			}
+		}
 	},
 	handleInput: function(inputType, inputData) {
 		if ( inputType === 'keydown'){
@@ -61,12 +98,11 @@ Game.Screen.winScreen = {
 }
 
 //define our playing screen
-Game.Screen.playScreen = {
-	enter: function() { console.log("Entered play screen"); },
-	exit: function() { console.log("Exited play screen."); },
+Game.Screen.loseScreen = {
+	enter: function() { console.log("Entered lose screen"); },
+	exit: function() { console.log("Exited lose screen."); },
 	render: function(display) {
-		display.drawText(3,5, "%c{red}%b{white}This game exists!");
-		display.drawText(4,6, "Press [Enter] to win, or [Esc] to lose!");
+		display.drawText(3,5, "%c{red}%b{white}This game lose!");
 	},
 	handleInput: function(inputType, inputData) {
 		//nothing to do here
