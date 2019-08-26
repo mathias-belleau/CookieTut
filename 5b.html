@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+	<head>
+		
+	<title>Coding.Cookies
+	- Building a Roguelike in Javascript - Part 5b: Attacking Spreading Fungi
+</title>
+<meta charset="utf-8" />
+<meta name="author" content="Dominic Charley-Roy"/>
+<meta name="keywords" content="dominic charley roy coding cookies programming html html5 javascript php functional js jquery css css3"/>
+<meta name="description" content="Building a Roguelike in Javascript - Part 5b - Attacking Spreading Fungi - Coding.Cookies"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="/feed"/>
+<link rel="alternate" type="application/atom+xml" title="Atom 1.0" href="/feed/atom"/>
+<link rel="stylesheet" href="/css/page.css?version=1391868354"/>
+<!--[if lt IE 9]>
+<script src="/js/shiv.min.js"></script>
+<![endif]-->
+
+	</head>
+	<body>
+		<div class="container">
+			<header class="sixteen columns page-header">
+				
+	<div class="page-branding">
+	<a href="/"><img id="logo-image" src="/img/icon.png" alt="coding cookies logo"/></a>
+	<h1>coding<br/>cookies</h1>
+</div>
+<nav class="page-menu">
+	<ul id="page-menu-list">
+		<li><a href="/" rel="home">Home</a></li>
+		<li><a href="/archive">Archive</a></li>
+		<li><a href="https://github.com/jokeofweek" rel="external">Github</a></li>
+		<li><a href="https://twitter.com/jokeofweek" rel="external">Twitter</a></li>
+		<li><a href="http://feeds.feedburner.com/codingcookies">RSS</a></li>
+		<li><a href="http://feedburner.google.com/fb/a/mailverify?uri=codingcookies&amp;loc=en_US" rel="external" target="_blank">Subscribe</a></li>
+	</ul>
+	<select id="page-menu-select">
+		<option value="" selected="selected">Browse...</option>
+		<option value="/">Home</option>
+		<option value="/archive">Archive</option>
+		<option value="https://github.com/jokeofweek">Github</option>
+		<option value="https://twitter.com/jokeofweek">Twitter</option>
+		<option value="http://feeds.feedburner.com/codingcookies">RSS</option>
+		<option value="http://feedburner.google.com/fb/a/mailverify?uri=codingcookies&amp;loc=en_US&blank">Subscribe</option>
+	</select>
+</nav>
+<hr />
+
+			</header>
+			<div class="twelve columns">
+				
+
+
+<article>
+	<header>
+		<a id="post-building-a-roguelike-in-javascript-part-5b"></a>
+		<h2 class="post-title">
+			<a href="/2013/04/23/building-a-roguelike-in-javascript-part-5b" rel="bookmark" title="Permanent Link to Building a Roguelike in Javascript - Part 5b">Building a Roguelike in Javascript - Part 5b</a>
+		</h2>
+
+			<h3 class="post-subtitle">
+				Attacking Spreading Fungi
+			</h3>
+
+		<h4 class="post-byline subheader">
+			Posted on <time datetime="2013-04-23T00:30:00-04:00">April 23, 2013</time> (<a class='category-link' href='/category/build-a-rl' rel='tag'>Build a RL</a>, <a class='category-link' href='/category/gamedev' rel='tag'>Gamedev</a>, <a class='category-link' href='/category/javascript' rel='tag'>Javascript</a>, <a class='category-link' href='/category/roguelikes' rel='tag'>Roguelikes</a>)
+		</h4>
+	</header>
+	<div class="post-content">
+		
+  <p>This is the seventh post in the <em>Building a Roguelike in Javascript</em> series. I recommend you <a href="/2013/04/01/building-a-roguelike-in-javascript-part-1/">start at the beginning</a> unless you've been following along. This part corresponds to <a href="http://trystans.blogspot.ca/2011/09/roguelike-tutorial-05-stationary.html">the fifth part</a> in Trystan's series. All the code for this part can be found at the <a href="https://github.com/jokeofweek/jsrogue/tree/part5b">part 5b tag</a> of the <a href="https://github.com/jokeofweek/jsrogue">jsrogue repository</a>. At the time of writing, I am still using the <a href="https://github.com/ondras/rot.js/commit/d4ea2abb55432929aee1ed81cac10cebdda5aebb">d4ea2ab commit</a> for rot.js.</p>
+<p>Today we're going to make it so that we can interact with our fungi! We're going to add a basic attack system which will simply remove an entity when our player attacks it. For those unfamiliar with roguelikes, attacking is generally done by bumping into or moving into the entity we wish to attack. We're also going to make the fungus entity spread randomly over time, eventually taking over our cave unless our hero chooses to rise to the task and attack every fungus!</p>
+<h3>Demo Link</h3>
+<p>The results after this post can be seen <a href="/demo/rl_part5b">here</a></p>
+<a name="continue"></a>
+<h3>assets/map.js</h3>
+<p>Before we can get started with our attack system, we need a way to actually remove an entity from the map. One special consideration to make is that we must also remove the entity from the scheduler if they were an actor. So you're going to want to add the following function:</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Map</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">removeEntity</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">entity</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Find the entity in the list of entities if it is present</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="k">this</span><span class="p">.</span><span class="nx">_entities</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_entities</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">==</span> <span class="nx">entity</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_entities</span><span class="p">.</span><span class="nx">splice</span><span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="c1">// If the entity is an actor, remove them from the scheduler</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">entity</span><span class="p">.</span><span class="nx">hasMixin</span><span class="p">(</span><span class="s1">&#39;Actor&#39;</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_scheduler</span><span class="p">.</span><span class="nx">remove</span><span class="p">(</span><span class="nx">entity</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>When we implement the fungi spreading, we're going to make it spread to an adjacent tile. In order to do this, we'll need to check whether a tile is an empty floor tile. As this will be a pretty common thing to check for, let's create a helper function which will do just that so we have a central place to add in features:</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Map</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">isEmptyFloor</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Check if the tile is floor and also has no entity</span>
+    <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nx">getTile</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">)</span> <span class="o">==</span> <span class="nx">Game</span><span class="p">.</span><span class="nx">Tile</span><span class="p">.</span><span class="nx">floorTile</span> <span class="o">&amp;&amp;</span>
+           <span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">getEntityAt</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>While we're here, let's go ahead and update our <em>getRandomFloorPosition</em> to make use of this function:</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Map</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">getRandomFloorPosition</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// Randomly generate a tile which is a floor</span>
+    <span class="kd">var</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">;</span>
+    <span class="k">do</span> <span class="p">{</span>
+        <span class="nx">x</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_width</span><span class="p">);</span>
+        <span class="nx">y</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="k">this</span><span class="p">.</span><span class="nx">_width</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="k">this</span><span class="p">.</span><span class="nx">isEmptyFloor</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">));</span>
+    <span class="k">return</span> <span class="p">{</span><span class="nx">x</span><span class="o">:</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="o">:</span> <span class="nx">y</span><span class="p">};</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>The last change we're going to want to make is to decrease the number of initial fungi. Because they will be spreading throughout the dungeon it will be much more apparent if we start with a small number. Feel free to play around with the number! We have to change:</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Map</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">tiles</span><span class="p">,</span> <span class="nx">player</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="c1">// add random fungi</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="mi">50</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">addEntityAtRandomPosition</span><span class="p">(</span><span class="k">new</span> <span class="nx">Game</span><span class="p">.</span><span class="nx">Entity</span><span class="p">(</span><span class="nx">Game</span><span class="p">.</span><span class="nx">FungusTemplate</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>We're now ready to make it so we can hack away at these pesky growing fungi!</p>
+<h3>assets/entities.js</h3>
+<p>In order to implement our basic attacking system, we're going to have two mixins. The first wil be a mixin denoting an entity that is destructible. For now the most basic mixin will have a certain number of hit points and a <em>takeDamage</em> function. The <em>takeDamage</em> function will subtract the damage caused by an attacker, and if the hit points are 0 or below, remove that entity from the map. For now all <em>Destructible</em> entities will have 1 hit point.</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">Destructible</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;Destructible&#39;</span><span class="p">,</span>
+    <span class="nx">init</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_hp</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">},</span>
+    <span class="nx">takeDamage</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">attacker</span><span class="p">,</span> <span class="nx">damage</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_hp</span> <span class="o">-=</span> <span class="nx">damage</span><span class="p">;</span>
+        <span class="c1">// If have 0 or less HP, then remove ourseles from the map</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_hp</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">getMap</span><span class="p">().</span><span class="nx">removeEntity</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>The second will be some kind of Attacker mixin, which has a sole method <em>attack</em>. When an entity chooses to attack a target, we will call the <em>attack</em> method with the target. Similar to the Actor mixin we implemented last post, the Attacker mixin will also be a common group (using the <em>groupName</em>) and we'll create more specific ones when necessary, allowing us to come up with really cool ways of attacking. To keep it simple, if our target is destructible, we will damage the target by 1 HP, removing it from the map.</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">SimpleAttacker</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;SimpleAttacker&#39;</span><span class="p">,</span>
+    <span class="nx">groupName</span><span class="o">:</span> <span class="s1">&#39;Attacker&#39;</span><span class="p">,</span>
+    <span class="nx">attack</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">target</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Only remove the entity if they were attackable</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">target</span><span class="p">.</span><span class="nx">hasMixin</span><span class="p">(</span><span class="s1">&#39;Destructible&#39;</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">target</span><span class="p">.</span><span class="nx">takeDamage</span><span class="p">(</span><span class="k">this</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>Now we need to update our templates to include these mixins! We want to add a SimpleAttacker and Destructible to the player's template as in the future the player will be attackable. We also want to add Destructible to the fungi.</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="c1">// Player template</span>
+<span class="nx">Game</span><span class="p">.</span><span class="nx">PlayerTemplate</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">character</span><span class="o">:</span> <span class="s1">&#39;@&#39;</span><span class="p">,</span>
+    <span class="nx">foreground</span><span class="o">:</span> <span class="s1">&#39;white&#39;</span><span class="p">,</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span><span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">Moveable</span><span class="p">,</span> <span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">PlayerActor</span><span class="p">,</span>
+             <span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">SimpleAttacker</span><span class="p">,</span> <span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">Destructible</span><span class="p">]</span>
+<span class="p">}</span>
+<span class="c1">// Fungus template</span>
+<span class="nx">Game</span><span class="p">.</span><span class="nx">FungusTemplate</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">character</span><span class="o">:</span> <span class="s1">&#39;F&#39;</span><span class="p">,</span>
+    <span class="nx">foreground</span><span class="o">:</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span>
+    <span class="nx">mixins</span><span class="o">:</span> <span class="p">[</span><span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">FungusActor</span><span class="p">,</span> <span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">Destructible</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>So now we have our attacking mixins set up and put in place. However we have to change our Moveable as well in order to make it so that if there is an entity present at the cell we wish to move to, and we are an attacker, than try to attack the entity!</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="c1">// Define our Moveable mixin</span>
+<span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">Moveable</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;Moveable&#39;</span><span class="p">,</span>
+    <span class="nx">tryMove</span><span class="o">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">,</span> <span class="nx">map</span><span class="p">)</span> <span class="p">{</span>
+        <span class="kd">var</span> <span class="nx">tile</span> <span class="o">=</span> <span class="nx">map</span><span class="p">.</span><span class="nx">getTile</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">target</span> <span class="o">=</span> <span class="nx">map</span><span class="p">.</span><span class="nx">getEntityAt</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">);</span>
+        <span class="c1">// If an entity was present at the tile</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">target</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// If we are an attacker, try to attack</span>
+            <span class="c1">// the target</span>
+            <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">hasMixin</span><span class="p">(</span><span class="s1">&#39;Attacker&#39;</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">this</span><span class="p">.</span><span class="nx">attack</span><span class="p">(</span><span class="nx">target</span><span class="p">);</span>
+                <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="c1">// If not nothing we can do, but we can&#39;t </span>
+                <span class="c1">// move to the tile</span>
+                <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="c1">// Check if we can walk on the tile</span>
+        <span class="c1">// and if so simply walk onto it</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">tile</span><span class="p">.</span><span class="nx">isWalkable</span><span class="p">())</span> <span class="p">{</span>        
+            <span class="c1">// Update the entity&#39;s position</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_x</span> <span class="o">=</span> <span class="nx">x</span><span class="p">;</span>
+            <span class="k">this</span><span class="p">.</span><span class="nx">_y</span> <span class="o">=</span> <span class="nx">y</span><span class="p">;</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+        <span class="c1">// Check if the tile is diggable, and</span>
+        <span class="c1">// if so try to dig it</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">tile</span><span class="p">.</span><span class="nx">isDiggable</span><span class="p">())</span> <span class="p">{</span>
+            <span class="nx">map</span><span class="p">.</span><span class="nx">dig</span><span class="p">(</span><span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">);</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>Our attacking system is now put in place! At this point you can go ahead and try it out! If everything went well you should be able to go up to a fungus on the map, walk into it and it will dissapear! In a few posts we'll turn this into a real attacking system with stats and health and all sorts of other goodies, but for it's pretty pleasing to see what we've already accomplished!</p>
+<p>The next step is to implement the fungus growth. Recall last post that the scheduling system worked by calling the <em>act</em> method of entities turn by turn. We had created an actor mixin for the fungus, but it didn't do anything yet. As this is called every time the fungus has a turn, this seems like it could be the perfect place to put our spreading logic! </p>
+<p>We want each fungus to be able to spread in one of the eight adjacent squares, however to make it interesting we don't want to do it every turn. Instead we are going to make it so that every turn the fungus has a fixed chance of growing. We're also going to want to limit the number of times a fungus can grow to let's say 5. Remember that mixins have an optional <em>init</em> function which can be called when the mixin is created to add state to the fungus. For now let's make it set up our state with a counter keeping trakc of how many times we can grow.</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">FungusActor</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;FungusActor&#39;</span><span class="p">,</span>
+    <span class="nx">groupName</span><span class="o">:</span> <span class="s1">&#39;Actor&#39;</span><span class="p">,</span>
+    <span class="nx">init</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_growthsRemaining</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+    <span class="p">},</span>
+    <span class="nx">act</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> 
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<p>At every turn, if a fungus can still grow we use <em>Math.random</em>, which returns a number between 0.0 and 1.0, to determine if it should grow this turn. If so, then we generate the coordinates of a random adjacent square and check if we can grow to it. If we can, we will spawn a new fungus at that position and update our counters!</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Mixins</span><span class="p">.</span><span class="nx">FungusActor</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">name</span><span class="o">:</span> <span class="s1">&#39;FungusActor&#39;</span><span class="p">,</span>
+    <span class="nx">groupName</span><span class="o">:</span> <span class="s1">&#39;Actor&#39;</span><span class="p">,</span>
+    <span class="nx">init</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">_growthsRemaining</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+    <span class="p">},</span>
+    <span class="nx">act</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span> 
+        <span class="c1">// Check if we are going to try growing this turn</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_growthsRemaining</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mf">0.02</span><span class="p">)</span> <span class="p">{</span>
+                <span class="c1">// Generate the coordinates of a random adjacent square by</span>
+                <span class="c1">// generating an offset between [-1, 0, 1] for both the x and</span>
+                <span class="c1">// y directions. To do this, we generate a number from 0-2 and then</span>
+                <span class="c1">// subtract 1.</span>
+                <span class="kd">var</span> <span class="nx">xOffset</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+                <span class="kd">var</span> <span class="nx">yOffset</span> <span class="o">=</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">floor</span><span class="p">(</span><span class="nb">Math</span><span class="p">.</span><span class="nx">random</span><span class="p">()</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+                <span class="c1">// Make sure we aren&#39;t trying to spawn on the same tile as us</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">xOffset</span> <span class="o">!=</span> <span class="mi">0</span> <span class="o">||</span> <span class="nx">yOffset</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="c1">// Check if we can actually spawn at that location, and if so</span>
+                    <span class="c1">// then we grow!</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getMap</span><span class="p">().</span><span class="nx">isEmptyFloor</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getX</span><span class="p">()</span> <span class="o">+</span> <span class="nx">xOffset</span><span class="p">,</span>
+                                                   <span class="k">this</span><span class="p">.</span><span class="nx">getY</span><span class="p">()</span> <span class="o">+</span> <span class="nx">yOffset</span><span class="p">))</span> <span class="p">{</span>
+                        <span class="kd">var</span> <span class="nx">entity</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Game</span><span class="p">.</span><span class="nx">Entity</span><span class="p">(</span><span class="nx">Game</span><span class="p">.</span><span class="nx">FungusTemplate</span><span class="p">);</span>
+                        <span class="nx">entity</span><span class="p">.</span><span class="nx">setX</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getX</span><span class="p">()</span> <span class="o">+</span> <span class="nx">xOffset</span><span class="p">);</span>
+                        <span class="nx">entity</span><span class="p">.</span><span class="nx">setY</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getY</span><span class="p">()</span> <span class="o">+</span> <span class="nx">yOffset</span><span class="p">);</span>
+                        <span class="k">this</span><span class="p">.</span><span class="nx">getMap</span><span class="p">().</span><span class="nx">addEntity</span><span class="p">(</span><span class="nx">entity</span><span class="p">);</span>
+                        <span class="k">this</span><span class="p">.</span><span class="nx">_growthsRemaining</span><span class="o">--</span><span class="p">;</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<h3>assets/screens.js</h3>
+<p>We are now just about ready to watch our fungus growth! We're going to reduce the map size as the fungus growing rapidly gets out of hand and depending on your computer may make movement very sluggish. So I've shrunk the map down to 100 by 48:</p>
+<table class="pygments_murphytable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11</pre></div></td><td class="code"><div class="pygments_murphy"><pre><span class="nx">Game</span><span class="p">.</span><span class="nx">Screen</span><span class="p">.</span><span class="nx">playScreen</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1">// ...</span>
+    <span class="nx">enter</span><span class="o">:</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>  
+        <span class="kd">var</span> <span class="nx">map</span> <span class="o">=</span> <span class="p">[];</span>
+        <span class="c1">// Create a map based on our size parameters</span>
+        <span class="kd">var</span> <span class="nx">mapWidth</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">mapHeight</span> <span class="o">=</span> <span class="mi">48</span><span class="p">;</span>
+        <span class="c1">// ...</span>
+    <span class="p">}</span>
+    <span class="c1">// ...</span>
+<span class="p">}</span>
+</pre></div>
+</td></tr></table>
+
+<h3>Conclusion</h3>
+<p>We've now got a cave which gets overrun by fungus which our hero can then go and hack away with our simple attacking system! In the next post we are going to start focusing on real combat as well as giving some feedbak to the player through messages.</p>
+<p>I hope you enjoyed this post and that you'll stick around for the next part! Remember that all the code for this part can be found at the <a href="https://github.com/jokeofweek/jsrogue/tree/part5b">part 5b tag</a> of the <a href="https://github.com/jokeofweek/jsrogue">jsrogue repository</a>. Also please feel free to post any comments whether questions, clarifications or criticism!</p>
+<p>Thanks for reading,</p>
+<p>Dominic</p>
+<h3>Next Part</h3>
+<p><a href="/2013/04/30/building-a-roguelike-in-javascript-part-6/">Part 6 - Combat and Messages</a></p>
+
+	</div>
+	
+
+
+
+<script type="text/javascript">
+	var disqus_shortname = 'coding-cookies'; // required: replace example with your forum shortname
+	var disqus_url = "http://www.codingcookies.com/2013/04/23/building-a-roguelike-in-javascript-part-5b";
+
+	/* * * DON'T EDIT BELOW THIS LINE * * */
+	(function() {
+		var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+		dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+		(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+	})();
+</script>
+<div id="disqus_thread"></div>
+<script type="text/javascript" src="http://disqus.com/forums/coding-cookies/embed.js"></script>
+
+</article>
+			</div>
+			<aside class="four columns">
+				
+	
+
+<h3 class="small-caps">recent articles</h3>
+<ul>
+		<li>
+			<a href="/2013/11/25/building-a-roguelike-in-javascript-part-16" rel="bookmark" title="Permanent Link to Building a Roguelike in Javascript - Part 16">Building a Roguelike in Javascript - Part 16</a>
+		</li>
+		<li>
+			<a href="/2013/09/21/creating-a-proxy-server-with-go" rel="bookmark" title="Permanent Link to Creating a Proxy Server with Go">Creating a Proxy Server with Go</a>
+		</li>
+		<li>
+			<a href="/2013/09/21/building-a-roguelike-in-javascript-part-15" rel="bookmark" title="Permanent Link to Building a Roguelike in Javascript - Part 15">Building a Roguelike in Javascript - Part 15</a>
+		</li>
+		<li>
+			<a href="/2013/09/14/building-a-roguelike-in-javascript-part-14" rel="bookmark" title="Permanent Link to Building a Roguelike in Javascript - Part 14">Building a Roguelike in Javascript - Part 14</a>
+		</li>
+		<li>
+			<a href="/2013/09/07/building-a-roguelike-in-javascript-part-13" rel="bookmark" title="Permanent Link to Building a Roguelike in Javascript - Part 13">Building a Roguelike in Javascript - Part 13</a>
+		</li>
+</ul>
+<h3 class="small-caps">categories</h3>
+<ul>
+		<li>
+			<a href="/category\api" rel="tag" title="API (1)">
+				API (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\blogofile" rel="tag" title="Blogofile (1)">
+				Blogofile (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\build-a-rl" rel="tag" title="Build a RL (20)">
+				Build a RL (20)
+			</a>
+		</li>
+		<li>
+			<a href="/category\functional" rel="tag" title="Functional (2)">
+				Functional (2)
+			</a>
+		</li>
+		<li>
+			<a href="/category\gamedev" rel="tag" title="Gamedev (21)">
+				Gamedev (21)
+			</a>
+		</li>
+		<li>
+			<a href="/category\general" rel="tag" title="General (2)">
+				General (2)
+			</a>
+		</li>
+		<li>
+			<a href="/category\go" rel="tag" title="Go (2)">
+				Go (2)
+			</a>
+		</li>
+		<li>
+			<a href="/category\golang" rel="tag" title="Golang (2)">
+				Golang (2)
+			</a>
+		</li>
+		<li>
+			<a href="/category\http" rel="tag" title="HTTP (2)">
+				HTTP (2)
+			</a>
+		</li>
+		<li>
+			<a href="/category\json" rel="tag" title="JSON (1)">
+				JSON (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\java" rel="tag" title="Java (1)">
+				Java (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\javascript" rel="tag" title="Javascript (23)">
+				Javascript (23)
+			</a>
+		</li>
+		<li>
+			<a href="/category\meta" rel="tag" title="Meta (1)">
+				Meta (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\node.js" rel="tag" title="Node.js (1)">
+				Node.js (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\personal" rel="tag" title="Personal (1)">
+				Personal (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\procedural-content" rel="tag" title="Procedural Content (1)">
+				Procedural Content (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\python" rel="tag" title="Python (1)">
+				Python (1)
+			</a>
+		</li>
+		<li>
+			<a href="/category\roguelikes" rel="tag" title="Roguelikes (21)">
+				Roguelikes (21)
+			</a>
+		</li>
+		<li>
+			<a href="/category\socket.io" rel="tag" title="Socket.IO (1)">
+				Socket.IO (1)
+			</a>
+		</li>
+</ul>
+
+
+			</aside>
+			<footer class="sixteen columns page-footer">
+				
+	<hr />
+<small>
+	<a href="/disclaimer">Disclaimer</a> - Content &#169; 2014 Dominic Charley-Roy. Powered by <a href="http://www.blogofile.com" rel="external">Blogofile</a>, <a href="http://disqus.com" rel="external">Disqus</a>, <a href="http://www.getskeleton.com/" rel="external">Skeleton</a> and <a href="https://www.heroku.com/" rel="external">Heroku</a>
+</small>
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+		var links = document.getElementsByTagName('a');
+		var query = '?';
+		for(var i = 0; i < links.length; i++) {
+			if(links[i].href.indexOf('#disqus_thread') >= 0) {
+				query += 'url' + i + '=' + encodeURIComponent(links[i].href) + '&';
+			}
+		}
+		document.write('<script charset="utf-8" type="text/javascript" src="http://disqus.com/forums/coding-cookies/get_num_replies.js' + query + '"></' + 'script>');
+	})();
+//]]>
+</script>
+
+
+			</footer>
+		</div>
+		<script type="text/javascript">var _gaq=_gaq||[];_gaq.push(["_setAccount","UA-30044994-1"]);_gaq.push(["_trackPageview"]);(function(){var a=document.createElement("script");a.type="text/javascript";a.async=!0;a.src=("https:"==document.location.protocol?"https://ssl":"http://www")+".google-analytics.com/ga.js";var b=document.getElementsByTagName("script")[0];b.parentNode.insertBefore(a,b)})();</script>
+		<script type="text/javascript">
+			(function() {
+				var menu = document.getElementById('page-menu-select');
+				menu.addEventListener('change', function() {
+					if (menu.value) {
+						if (menu.value.substring(menu.value.length - 6) === '&blank') {
+							window.open(menu.value);
+						} else {
+							window.location = menu.value;
+						}
+					}
+				}, false);
+			})();
+		</script>
+	</body>
+</html>
+
+
+
+
+
+
+
+

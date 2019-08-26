@@ -10,6 +10,9 @@ Game.Entity = function(properties) {
 	// create an object which will keep track what mixins we have
 	// attached to this entity based on the name property
 	this._attachedMixins = {};
+	// Create a similar object for groups
+    this._attachedMixinGroups = {};
+
 	// setup the objects mixins
 	var mixins = properties['mixins'] || [];
 	for (var i = 0; i < mixins.length; i++) {
@@ -24,19 +27,15 @@ Game.Entity = function(properties) {
 		}
 		//add the name of this mixin to our attached mixins
 		this._attachedMixins[mixins[i].name] = true
+		// if a group name is present, add it
+		if (mixins[i].groupName) {
+			this._attachedMixinGroups[mixins[i].groupName] = true;
+		}
+
 		// finally call the init function if there is one
 		if (mixins[i].init) {
 			mixins[i].init.call(this, properties);
 		}
-	}
-}
-
-Game.Entity.prototype.hasMixin = function(obj) {
-	// allow passing the mixin itself or the name as a string
-	if(typeof obj === 'object') {
-		return this._attachedMixins[obj.name];
-	} else {
-		return this._attachedMixins[name];
 	}
 }
 
@@ -46,6 +45,15 @@ Game.Entity.extend(Game.Glyph);
 
 Game.Entity.prototype = Object.create(Game.Glyph.prototype);
 Game.Entity.prototype.constructor = Game.Entity;
+
+Game.Entity.prototype.hasMixin = function(obj) {
+	// allow passing the mixin itself or the name as a string
+	if(typeof obj === 'object') {
+		return this._attachedMixins[obj.name];
+	} else {
+		return this._attachedMixins[obj] || this._attachedMixinGroups[obj];
+	}
+}
 
 Game.Entity.prototype.setName = function(name) {
 	this._name = name;
@@ -66,3 +74,11 @@ Game.Entity.prototype.getX = function() {
 Game.Entity.prototype.getY   = function() {
     return this._y;
 }
+
+Game.Entity.prototype.setMap = function(map) {
+    this._map = map;
+}
+Game.Entity.prototype.getMap = function() {
+    return this._map;
+}
+
