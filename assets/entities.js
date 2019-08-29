@@ -3,25 +3,58 @@ Game.Mixins = {};
 
 Game.Mixins.Destructible = {
 	name: 'Destructible',
-	init: function() {
-		this._hp = 1;
+	init: function(template) {
+		this._maxHp = template['maxHp'] || 10;
+		// we allow takin in hp from the template in case we want
+		// the entity to start with a diff amount of hp
+		// than max specified
+		this._hp = template['hp'] || this._maxHp;
+		this._defenseValue = template['defenseValue'] || 0;
+	},
+	getDefenseValue: function() {
+		return this._defenseValue;
+	},
+	getHp: function() {
+		return this._hp;
+	},
+	getMaxHp: function() {
+		return this._maxHp;
 	},
 	takeDamage: function(attacker, damage) {
 		this._hp -= damage;
 		// if have 0 or less hp, then remove ourselves from the map
 		if (this._hp <= 0) {
+			Game.sendMessage(attacker, 'You kill the %s!', [this.getName()]);
+			Game.sendMessage(this, 'You die!');
 			this.getMap().removeEntity(this);
 		}
 	}
 }
 
-Game.Mixins.SimpleAttacker = {
-	name: 'SimpleAttacker',
+Game.Mixins.Attacker = {
+	name: 'Attacker',
 	groupName: 'Attacker',
+	init: function(template) {
+		this._attackValue = template['attackValue'] || 1;
+	},
+	getAttackValue: function() {
+		return this._attackValue;
+	},
 	attack: function(target) {
-		// only remove the entity if they were attackable
+		// if the target is destructible, calc damage
+		// based on attack and defense
 		if (target.hasMixin('Destructible')) {
-			target.takeDamage(this, 1);
+			var attack = this.getAttackValue();
+			var defense = target.getDefenseValue();
+			var max = Math.max(0, attack-defense);
+			var damage = 1 + Math.floor(Math.random() * max);
+
+			Game.sendMessage(this, 'You strike the %s for %d damage!',
+				[target.getName(), damage]);
+			Game.sendMessage(target, 'The %s strikes you for %d damage!',
+				[this.getName(), damage]);
+
+			target.takeDamage(this, damage);
 		}
 	}
 }
@@ -71,6 +104,8 @@ Game.Mixins.PlayerActor = {
 		// Lock the engine and wait asynchronously
 		// for the player to press a key
 		this.getMap().getEngine().lock();
+		//clear messages
+		this.clearMessages();
 	}
 }
 
@@ -101,6 +136,11 @@ Game.Mixins.FungusActor = {
     					entity.setY(this.getY() + yOffset);
     					this.getMap().addEntity(entity);
     					this._growthsRemaining--;
+
+    					// send a message nearby
+    					Game.sendMessageNearby(this.getMap(),
+    						entity.getX(), entity.getY(),
+    						'The fungus is spreading!');
     				}
     			}
 
@@ -109,17 +149,64 @@ Game.Mixins.FungusActor = {
     }
 }
 
+Game.Mixins.MessageRecipient = {
+	name: 'MessageRecipient',
+	init: function(template) {
+		this._messages = [];
+	},
+	receiveMessage: function(message) {
+		this._messages.push(message);
+	},
+	getMessages: function(){
+		return this._messages;
+	},
+	clearMessages: function() {
+		this._messages = [];
+	}
+}
+
+Game.sendMessage = function(recipient, message, args) {
+	// make sure the recipient can receive
+	if (recipient.hasMixin(Game.Mixins.MessageRecipient)) {
+		// if args were passed then we format
+		if (args) {
+			message = vsprintf(message, args);
+		}
+		recipient.receiveMessage(message);
+	}
+}
+
+Game.sendMessageNearby = function(map, centerX, centerY, message, args) {
+	// if args were passed we format
+	if (args) {
+		message = vsprintf(message, args);
+	}
+	//get nearrby entities
+	entities = map.getEntitiesWithinRadius(centerX, centerY, 5);
+	// iterate thru and send message
+	for (var i = 0; i < entities.length; i++){
+		if (entities[i].hasMixin(Game.Mixins.MessageRecipient)) {
+			entities[i].receiveMessage(message);
+		}
+	}
+}
+
 // Player template
 Game.PlayerTemplate = {
 	character: '@',
 	foreground: 'white',
 	background: 'black',
+	maxHp: 40,
+	attackValue: 10,
 	mixins: [Game.Mixins.Moveable, Game.Mixins.PlayerActor,
-			Game.Mixins.SimpleAttacker, Game.Mixins.Destructible]
+			Game.Mixins.Attacker, Game.Mixins.Destructible,
+			Game.Mixins.MessageRecipient]
 }
 
 Game.FungusTemplate = {
+	name: 'fungus',
     character: 'F',
     foreground: 'green',
+    maxHp: 10,
     mixins: [Game.Mixins.FungusActor, Game.Mixins.Destructible]
 }

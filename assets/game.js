@@ -16,7 +16,7 @@ var Game = {
 	init: function() {
 		// any necessary init wil lgo here.
 		this._display = new ROT.Display({width: this._screenWidth,
-										height: this._screenHeight});
+										height: this._screenHeight + 1});
 		// create helper function for binding to an event
 		// and making ti send to the screen
 		var game = this; // so that we don't lose this

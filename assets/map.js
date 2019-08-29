@@ -119,3 +119,23 @@ Game.Map.prototype.getTile = function(x,y) {
 		return this._tiles[x][y] || Game.Tile.nullTile;
 	}
 };
+
+Game.Map.prototype.getEntitiesWithinRadius = function(centerX, centerY, radius) {
+	results = [];
+	// determine our bounds
+	var leftX = centerX - radius;
+	var rightX = centerX + radius;
+	var topY = centerY - radius;
+	var bottomY = centerY + radius;
+
+	//iterate thru our entites, adding any which are within bounds
+	for (var i = 0; i < this._entities.length; i++) {
+		if (this._entities[i].getX() >= leftX &&
+            this._entities[i].getX() <= rightX && 
+            this._entities[i].getY() >= topY &&
+            this._entities[i].getY() <= bottomY) {
+            results.push(this._entities[i]);
+        }
+	}
+	return results;
+}

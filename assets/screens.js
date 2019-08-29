@@ -11,6 +11,7 @@ Game.Screen.startScreen = {
 		//render our prompt to the screen
 		display.drawText(1,1,"%c{yellow}Javascript roguelike");
 		display.drawText(1,2,"Press [Enter] to start!");
+
 	},
 	handleInput: function(inputType, inputData) {
 		//when [enter] is pressed, go to the play screen
@@ -110,6 +111,21 @@ Game.Screen.playScreen = {
                 );
             }
 		}
+		//get messages in player queue
+		var messages = this._player.getMessages();
+		var messageY = 0;
+		for (var i = 0; i < messages.length; i++ ){
+			//draw each message
+			messageY += display.drawText(
+				0,
+				messageY,
+				'%c{white}%b{black}' + messages[i]
+				);
+		}
+		//render player HP
+		var stats = '%c{white}%b{black}';
+		stats += vsprintf('HP: %d/%d ', [this._player.getHp(), this._player.getMaxHp()]);
+		display.drawText(0, screenHeight, stats);
 	},
 	handleInput: function(inputType, inputData) {
 		if ( inputType === 'keydown'){
