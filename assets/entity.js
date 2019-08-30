@@ -37,6 +37,13 @@ Game.Entity = function(properties) {
 			mixins[i].init.call(this, properties);
 		}
 	}
+
+	//instantiate any properties from the passed object
+	this._name = properties['name'] || '';
+	this._x = properties['x'] || 0;
+	this._y = properties['y'] || 0;
+	this._z = properties['z'] || 0;
+	this._map = null;
 }
 
 // make entities inherit all the functionality from glyphs
@@ -53,6 +60,12 @@ Game.Entity.prototype.hasMixin = function(obj) {
 	} else {
 		return this._attachedMixins[obj] || this._attachedMixinGroups[obj];
 	}
+}
+
+Game.Entity.prototype.setPosition = function(x, y, z) {
+    this._x = x;
+    this._y = y;
+    this._z = z;
 }
 
 Game.Entity.prototype.setName = function(name) {
@@ -82,3 +95,10 @@ Game.Entity.prototype.getMap = function() {
     return this._map;
 }
 
+Game.Entity.prototype.setZ = function(z) {
+    this._z = z;
+}
+// ...
+Game.Entity.prototype.getZ = function() {
+    return this._z;
+}

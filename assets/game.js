@@ -33,7 +33,7 @@ var Game = {
 		// bind keyboard input events
 		bindEventToScreen('keydown');
 		//bindEventToScreen('keyup');
-		//bindEventToScreen('keypress');
+		bindEventToScreen('keypress');
 	},
 	refresh: function() {
 		// clear the screen
