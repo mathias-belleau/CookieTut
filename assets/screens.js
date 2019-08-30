@@ -36,6 +36,7 @@ Game.Screen.playScreen = {
 		// create our map from the tiles and player
 		var tiles = new Game.Builder(width, height, depth).getTiles();
 		this._player = new Game.Entity(Game.PlayerTemplate);
+		console.log("player z " + this._player.getZ());
 		this._map = new Game.Map(tiles, this._player);
 	  //this.map = new Game.Map(map, this._player);
 	  //start the maps engine
@@ -102,53 +103,52 @@ Game.Screen.playScreen = {
 		display.drawText(0, screenHeight, stats);
 	},
 	handleInput: function(inputType, inputData) {
-		if ( inputType === 'keydown'){
-			console.log(inputData.keyCode);
-			//if enter is pressed, go to the win screen
-			//if escape is pressed go to lose
-			if(inputData.keyCode === ROT.KEYS.VK_RETURN) {
-				Game.switchScreen(Game.Screen.winScreen);
-			} else if (inputData.keyCode === ROT.KEYS.VK_ESCAPE) {
-				Game.switchScreen(Game.Screen.loseScreen);
-			} else {
-				//movment
-				if (inputData.keyCode === ROT.KEYS.VK_LEFT) {
-					this.move(-1,0);
-				} else if (inputData.keyCode === ROT.KEYS.VK_RIGHT){
-					this.move(1,0);
-				} else if (inputData.keyCode === ROT.KEYS.VK_UP){
-					this.move(0, -1);
-				} else if (inputData.keyCode === ROT.KEYS.VK_DOWN){
-					this.move(0,1);
-				} else {
-					// not a valid key
-					return;
-				}
-				//unlock the engine
-				this._map.getEngine().unlock();
-			} 
-
-		} else if ( inputType === 'keypress') {
-			var keyChar = String.fromCharCode(inputData.charCode);
-			if (keyChar === '>') {
-				this.move(0,0,1);
-			} else if (keyChar === '<') {
-				this.move(0,0,-1);
-			} else {
-				//not valid key
-				return;
-			}
-			// unlock the engine
-			this._map.getEngine().unlock();			
-		}
-	},
-	move: function(dX, dY, dZ){
-		var newX = this._player.getX() + dX;
-		var newY = this._player.getY() + dY;
-		var newZ = this._player.getZ() = dZ;
-		// try to move to the new cell
-		this._player.tryMove(newX, newY, newZ, this._map);
-	}
+        if (inputType === 'keydown') {
+        	console.log(inputData.keyCode);
+            // If enter is pressed, go to the win screen
+            // If escape is pressed, go to lose screen
+            if (inputData.keyCode === ROT.KEYS.VK_RETURN) {
+                Game.switchScreen(Game.Screen.winScreen);
+            } else if (inputData.keyCode === ROT.KEYS.VK_ESCAPE) {
+                Game.switchScreen(Game.Screen.loseScreen);
+            } else {
+                // Movement
+                if (inputData.keyCode === ROT.KEYS.VK_LEFT) {
+                    this.move(-1, 0, 0);
+                } else if (inputData.keyCode === ROT.KEYS.VK_RIGHT) {
+                    this.move(1, 0, 0);
+                } else if (inputData.keyCode === ROT.KEYS.VK_UP) {
+                    this.move(0, -1, 0);
+                } else if (inputData.keyCode === ROT.KEYS.VK_DOWN) {
+                    this.move(0, 1, 0);
+                } else {
+                    // Not a valid key
+                    return;
+                }
+                // Unlock the engine
+                this._map.getEngine().unlock();
+            }
+        } else if (inputType === 'keypress') {
+            var keyChar = String.fromCharCode(inputData.charCode);
+            if (keyChar === '>') {
+                this.move(0, 0, 1);
+            } else if (keyChar === '<') {
+                this.move(0, 0, -1);
+            } else {
+                // Not a valid key
+                return;
+            }
+            // Unlock the engine
+            this._map.getEngine().unlock();
+        } 
+    },
+    move: function(dX, dY, dZ) {
+        var newX = this._player.getX() + dX;
+        var newY = this._player.getY() + dY;
+        var newZ = this._player.getZ() + dZ;
+        // Try to move to the new cell
+        this._player.tryMove(newX, newY, newZ, this._map);
+    }
 }
 
 //define our win screen

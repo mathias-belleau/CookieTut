@@ -63,50 +63,51 @@ Game.Mixins.Attacker = {
 Game.Mixins.Moveable = {
 	name: 'Moveable',
 	tryMove: function(x, y, z, map) {
-		var tile = map.getTile(x, y, this.getZ());
-		var target = map.getEntityAt(x, y, this.getZ());
-		//if our z level changed check if we are on a stair
-		if (z < this.getZ()) {
-			if (tile != Game.Tile.stairsUpTile) {
-				Game.sendMessage(this, "You can't go up here!");
-			} else {
-				Game.sendMessage(this, "You ascend to level %d!", [z+1]);
-				this.setPosition(x,y,z);
-			}
-		} else if ( z > this.getZ()) {
-			if (tile != Game.Tile.stairsDownTile) {
-				Game.sendMessage(this, "You can't go down here!");
-			} else {
-				this.setPosition(x, y, z);
-				Game.sendMessage(this, "You descend to level %d!", [z + 1]);
-			}
-		//if an entity was present at the tile
-		} else if (target) {
-			//if we are an attacker try to attack
-			// the target
-			if (this.hasMixin('Attacker')) {
-				this.attack(target);
-				return true;
-			} else {
-				// if not nothing we can do, but we can't
-				// move to this tile
-				return false;
-			}
-			
-		//check if we can walk on the tile
-		// if so simply walk onto it
-		} else if( tile.isWalkable()) {
-			//update the entity's position
-			this.setPosition(x,y,z);
-			return true;
-		} else if (tile.isdiggable()){
-		//check if the tile isdiggable, and
-		// if so try to dig it
-			map.dig(x,y,z);
-			return true;
-		}
-		return false;
-	}
+        var map = this.getMap();
+        // Must use starting z
+        var tile = map.getTile(x, y, this.getZ());
+        var target = map.getEntityAt(x, y, this.getZ());
+        // If our z level changed, check if we are on stair
+        if (z < this.getZ()) {
+            if (tile != Game.Tile.stairsUpTile) {
+                Game.sendMessage(this, "You can't go up here!");
+            } else {
+                Game.sendMessage(this, "You ascend to level %d!", [z + 1]);
+                this.setPosition(x, y, z);
+            }
+        } else if (z > this.getZ()) {
+            if (tile != Game.Tile.stairsDownTile) {
+                Game.sendMessage(this, "You can't go down here!");
+            } else {
+                this.setPosition(x, y, z);
+                Game.sendMessage(this, "You descend to level %d!", [z + 1]);
+            }
+        // If an entity was present at the tile
+        } else if (target) {
+            // If we are an attacker, try to attack
+            // the target
+            if (this.hasMixin('Attacker')) {
+                this.attack(target);
+                return true;
+            } else {
+                // If not nothing we can do, but we can't 
+                // move to the tile
+                return false;
+            }
+        // Check if we can walk on the tile
+        // and if so simply walk onto it
+        } else if (tile.isWalkable()) {        
+            // Update the entity's position
+            this.setPosition(x, y, z);
+            return true;
+        // Check if the tile is diggable, and
+        // if so try to dig it
+        } else if (tile.isDiggable()) {
+            map.dig(x, y, z);
+            return true;
+        }
+        return false;
+    }
 }
 
 //Main player's actor mixin

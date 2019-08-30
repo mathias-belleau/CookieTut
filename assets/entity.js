@@ -6,6 +6,7 @@ Game.Entity = function(properties) {
 	this._name = properties['name'] || '';
 	this._x = properties['x'] || 0;
 	this._y = properties['y'] || 0;
+	this._z = properties['z'] || 0;
 	this._map = null
 	// create an object which will keep track what mixins we have
 	// attached to this entity based on the name property
@@ -37,13 +38,6 @@ Game.Entity = function(properties) {
 			mixins[i].init.call(this, properties);
 		}
 	}
-
-	//instantiate any properties from the passed object
-	this._name = properties['name'] || '';
-	this._x = properties['x'] || 0;
-	this._y = properties['y'] || 0;
-	this._z = properties['z'] || 0;
-	this._map = null;
 }
 
 // make entities inherit all the functionality from glyphs

@@ -14,36 +14,36 @@ Game.Map = function(tiles, player) {
 	this.addEntityAtRandomPosition(player, 0);
 	// add random fungi
 	for (var z = 0; z < this._depth; z++){
-		for (var i = 0; i < 5; i++) {
+		for (var i = 0; i < 500; i++) {
 			this.addEntityAtRandomPosition(new Game.Entity(Game.FungusTemplate), z);
 		}
 	}
 };
 
 Game.Map.prototype.addEntity = function(entity) {
-	//make sure the entity's position is within bounds
-	if (entity.getX() < 0 || entity.getX() >= this._width ||
+    // Make sure the entity's position is within bounds
+    if (entity.getX() < 0 || entity.getX() >= this._width ||
         entity.getY() < 0 || entity.getY() >= this._height ||
         entity.getZ() < 0 || entity.getZ() >= this._depth) {
         throw new Error('Adding entity out of bounds.');
     }
-    //update the entity's map
+    // Update the entity's map
     entity.setMap(this);
-    // add the entity to the list of entities
+    // Add the entity to the list of entities
     this._entities.push(entity);
-    // check if this entity is an actor, and if so add
+    // Check if this entity is an actor, and if so add
     // them to the scheduler
     if (entity.hasMixin('Actor')) {
-    	this._scheduler.add(entity, true);
+       this._scheduler.add(entity, true);
     }
 }
 
 Game.Map.prototype.addEntityAtRandomPosition = function(entity, z) {
-	var position = this.getRandomFloorPosition(z);
-	entity.setX(position.x);
-	entity.setY(position.y);
-	entity.setZ(position.z);
-	this.addEntity(entity);
+    var position = this.getRandomFloorPosition(z);
+    entity.setX(position.x);
+    entity.setY(position.y);
+    entity.setZ(position.z);
+    this.addEntity(entity);
 }
 
 Game.Map.prototype.getEngine = function() {
@@ -53,27 +53,22 @@ Game.Map.prototype.getEntities = function() {
     return this._entities;
 }
 
-Game.Map.prototype.getEntityAt = function(x, y, z) {
-	//iterate through all entites searching for one with
-	// matching position
-	for (var i = 0; i < this._entities.length; i++) {
-		if (this._entities[i].getX() == x && this._entities[i].getY() == y||
-			this._entities[i].getZ() == z) {
-			return this._entities[i];
-		}
-	}
-	return false;
+Game.Map.prototype.getEntityAt = function(x, y, z){
+    // Iterate through all entities searching for one with
+    // matching position
+    for (var i = 0; i < this._entities.length; i++) {
+        if (this._entities[i].getX() == x && this._entities[i].getY() == y &&
+            this._entities[i].getZ() == z) {
+            return this._entities[i];
+        }
+    }
+    return false;
 }
 
-
 Game.Map.prototype.isEmptyFloor = function(x, y, z) {
-	// check if the tile is floor and also has no entity
-	var t = this.getTile(x, y, z);
-	console.log(t);
-	console.log(t == Game.Tile.floorTile);
-	return true;
-	//return this.getTile(x, y, z) == Game.Tile.floorTile &&
-	//	!this.getEntityAt(x, y, z);
+    // Check if the tile is floor and also has no entity
+    return this.getTile(x, y, z) == Game.Tile.floorTile &&
+           !this.getEntityAt(x, y, z);
 }
 
 Game.Map.prototype.removeEntity = function(entity) {
@@ -98,13 +93,13 @@ Game.Map.prototype.dig = function(x,y, z) {
 }
 
 Game.Map.prototype.getRandomFloorPosition = function(z) {
-	//randomly generate a tile which is a floor
-	var x, y;
-	do {
-		x = Math.floor(Math.random() * this._width);
-		y = Math.floor(Math.random() * this._height);
-	} while(!this.isEmptyFloor(x, y, z));
-	return{x: x, y: y, z: z};
+    // Randomly generate a tile which is a floor
+    var x, y;
+    do {
+        x = Math.floor(Math.random() * this._width);
+        y = Math.floor(Math.random() * this._height);
+    } while(!this.isEmptyFloor(x, y, z));
+    return {x: x, y: y, z: z};
 }
 
 // standard getters
@@ -119,35 +114,35 @@ Game.Map.prototype.getHeight = function() {
 	return this._height;
 };
 
-// gets the tile for a given coordinate set
-Game.Map.prototype.getTile = function(x,y, z) {
-	// make sure we are inside the bounds. if we aren't, return
-	// null tile.
-	if (x < 0 || x >= this._width || y < 0 || y >= this._height||
-		z < 0 || z >= this._depth) {
-		return Game.Tile.nullTile;
-	} else {
-		return this._tiles[z][x][y] || Game.Tile.nullTile;
-	}
+// Gets the tile for a given coordinate set
+Game.Map.prototype.getTile = function(x, y, z) {
+    // Make sure we are inside the bounds. If we aren't, return
+    // null tile.
+    if (x < 0 || x >= this._width || y < 0 || y >= this._height ||
+        z < 0 || z >= this._depth) {
+        return Game.Tile.nullTile;
+    } else {
+        return this._tiles[z][x][y] || Game.Tile.nullTile;
+    }
 };
 
-Game.Map.prototype.getEntitiesWithinRadius = function(centerX, centerY, centerZ, radius) {
-	results = [];
-	// determine our bounds
-	var leftX = centerX - radius;
-	var rightX = centerX + radius;
-	var topY = centerY - radius;
-	var bottomY = centerY + radius;
-
-	//iterate thru our entites, adding any which are within bounds
-	for (var i = 0; i < this._entities.length; i++) {
-		if (this._entities[i].getX() >= leftX &&
+Game.Map.prototype.getEntitiesWithinRadius = function(centerX, centerY,
+                                                      centerZ, radius) {
+    results = [];
+    // Determine our bounds
+    var leftX = centerX - radius;
+    var rightX = centerX + radius;
+    var topY = centerY - radius;
+    var bottomY = centerY + radius;
+    // Iterate through our entities, adding any which are within the bounds
+    for (var i = 0; i < this._entities.length; i++) {
+        if (this._entities[i].getX() >= leftX &&
             this._entities[i].getX() <= rightX && 
             this._entities[i].getY() >= topY &&
             this._entities[i].getY() <= bottomY &&
             this._entities[i].getZ() == centerZ) {
             results.push(this._entities[i]);
         }
-	}
-	return results;
+    }
+    return results;
 }
